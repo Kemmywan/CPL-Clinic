@@ -1,5 +1,14 @@
 from autogen_agentchat.agents import AssistantAgent, UserProxyAgent
 from autogen_ext.models.openai import OpenAIChatCompletionClient
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+api_key_get = os.getenv("AIHUBMIX_API_KEY") 
+api_key: str = ""
+if api_key_get != None:
+    api_key = api_key_get
 
 # SYSTEM_MESSAGES for the llm
 SYSTEM_MESSAGE_1 = """你是一个专业的医疗信息提取AI助手。
@@ -138,35 +147,35 @@ class LLMManager:
         # For medical_record
         self.llm_1 = OpenAIChatCompletionClient(
             model="gpt-4.1",
-            api_key="sk-Td0lvL6RVNsep6BWAeDf07E9Eb0742C5B5F442C8F63fFe1b",
+            api_key=api_key,
             base_url="https://aihubmix.com/v1",
         )
 
         # For schedule
         self.llm_2 = OpenAIChatCompletionClient(
             model="gpt-4.1",
-            api_key="sk-Td0lvL6RVNsep6BWAeDf07E9Eb0742C5B5F442C8F63fFe1b",
+            api_key=api_key,
             base_url="https://aihubmix.com/v1",
         )
 
         # For diagnostic
         self.llm_3 = OpenAIChatCompletionClient(
             model="gpt-4.1",
-            api_key="sk-Td0lvL6RVNsep6BWAeDf07E9Eb0742C5B5F442C8F63fFe1b",
+            api_key=api_key,
             base_url="https://aihubmix.com/v1",
         )
 
         # For recovery_advice
         self.llm_4 = OpenAIChatCompletionClient(
             model="gpt-4.1",
-            api_key="sk-Td0lvL6RVNsep6BWAeDf07E9Eb0742C5B5F442C8F63fFe1b",
+            api_key=api_key,
             base_url="https://aihubmix.com/v1",
         )
 
         # For exam_result
         self.llm_test = OpenAIChatCompletionClient(
             model="gpt-4.1",
-            api_key="sk-Td0lvL6RVNsep6BWAeDf07E9Eb0742C5B5F442C8F63fFe1b",
+            api_key=api_key,
             base_url="https://aihubmix.com/v1",
         )
 

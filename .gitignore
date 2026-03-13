@@ -1,0 +1,6 @@
+.env
+.env.*
+/data/
+/raw/
+**/__pycache__/
+/AutoCLP.egg-info/
