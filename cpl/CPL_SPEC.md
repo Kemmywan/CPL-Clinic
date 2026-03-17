@@ -6,7 +6,7 @@
 
 ## 一、概述
 
-CPL（Clinical Pathway Language）是 AutoCLP 系统中用于描述临床路径执行流程的领域专用语言（DSL）。
+CPL（Clinical Pathway Language）是 AutoCPL 系统中用于描述临床路径执行流程的领域专用语言（DSL）。
 
 **设计目标：**
 - 将 Commander LLM 分解出的 Task 列表转化为**可审阅、可覆写、可执行**的脚本
