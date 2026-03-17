@@ -1,6 +1,6 @@
 # CPL (Clinical Pathway Language) 规范文档
 
-> 版本：v1.0 | 作者：AutoCLP Team | 日期：2026-03-17
+> 版本：v1.0 | 作者：... | 日期：2026-03-17
 
 ---
 
