@@ -37,3 +37,25 @@ python main.py --dialogue=data/1.txt
 ```
 
 将`1.txt`中的对话传入进行处理
+
+uvicorn server:app --host 0.0.0.0 --port 8000 --reload
+
+---
+
+from ambient import MultimodalAdapter
+
+adapter = MultimodalAdapter()
+
+# CLI模式（从文件读入）
+raw = adapter.ingest_from_file(args.dialogue)
+
+# Web模式（从前端API读入）
+raw = adapter.ingest_from_string(request.dialogue)
+
+# 批量实验模式（test_record.py）
+for raw in adapter.ingest_batch_from_json(f"test_data/2020_{i*100}_{(i+1)*100}_100.txt"):
+    time_cost, record = await exp_record(raw.content)
+
+---
+
+

@@ -1,2 +1,3 @@
 pip install faiss-cpu sentence-transformers
 python==3.13.5
+pip install fastapi uvicorn sse-starlette

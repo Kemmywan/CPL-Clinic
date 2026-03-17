@@ -1,115 +1,136 @@
+"""
+VectorMemory — 基于 FAISS 的 [病历, 诊断] 二元组记忆存储与检索
+
+存储位置：
+  - memory/pairs.jsonl   每行一条 {"record": "...", "diagnostic": "..."}
+  - memory/vector.faiss   FAISS 向量索引
+
+功能：
+  - add_pair()      添加单条 (病历, 诊断) 二元组
+  - batch_import()  批量导入
+  - search()        基于文本相似度检索相关病例
+  - save_index()    持久化 FAISS 索引
+"""
+
 import os
 import json
-import faiss
 from typing import List, Dict
-from sentence_transformers import SentenceTransformer
-import numpy as np
 
-# 往上两级（rag/ -> 项目根目录）
-_RAG_DIR = os.path.dirname(os.path.abspath(__file__))       
-_PROJECT_ROOT = os.path.dirname(_RAG_DIR) 
+import faiss
+import numpy as np
+from sentence_transformers import SentenceTransformer
+
+_RAG_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = os.path.dirname(_RAG_DIR)
+_MEMORY_DIR = os.path.join(_PROJECT_ROOT, "memory")
+
 
 class VectorMemory:
     def __init__(
-            self,
-            dim=768,
-            index_file="",
-            triple_file="",
-            emb_model_name="shibing624/text2vec-base-chinese"
+        self,
+        dim: int = 768,
+        index_file: str = "",
+        pair_file: str = "",
+        emb_model_name: str = "shibing624/text2vec-base-chinese",
     ):
         self.dim = dim
-        self.index_file = index_file or os.path.join(_PROJECT_ROOT, 'memory', 'vector.faiss')
-        self.triple_file = triple_file or os.path.join(_PROJECT_ROOT, 'memory', 'triples.jsonl')
+        self.index_file = index_file or os.path.join(_MEMORY_DIR, "vector.faiss")
+        self.pair_file = pair_file or os.path.join(_MEMORY_DIR, "pairs.jsonl")
         self.emb_model = SentenceTransformer(emb_model_name)
-        self.index = faiss.IndexFlatL2(self.dim)
-        self.triples: List[Dict] = []
-        self._init_storage_files()
-    
-    def _init_storage_files(self):
-        
-        # Ensure the dir exists
+        self.pairs: List[Dict] = []
+        self.index: faiss.IndexFlatL2 = faiss.IndexFlatL2(self.dim)
+        self._load()
+
+    # -------------------- 初始化 --------------------
+
+    def _load(self):
         os.makedirs(os.path.dirname(self.index_file), exist_ok=True)
 
-        if os.path.exists(self.triple_file):
-            with open(self.triple_file, 'r', encoding='utf-8') as f:
-                self.triples = [json.loads(line) for line in f if line.strip()]
+        if os.path.exists(self.pair_file):
+            with open(self.pair_file, "r", encoding="utf-8") as f:
+                self.pairs = [json.loads(line) for line in f if line.strip()]
         else:
-            self.triples = []
+            self.pairs = []
 
         if os.path.exists(self.index_file):
             self.index = faiss.read_index(self.index_file)
         else:
             self.index = faiss.IndexFlatL2(self.dim)
-    
-    def triple_to_text(self, triple_obj: Dict) -> str:
 
-        return(
-            f"record: {triple_obj.get('record', '')}\n"
-            f"exam_result: {triple_obj.get('exam_result', '')}\n"
-            f"diagnostic: {triple_obj.get('diagnostic', '')}"
-        )
-    
-    def encode(self, triple: Dict) -> np.ndarray:
+    # -------------------- 编码 --------------------
 
-        text = self.triple_to_text(triple_obj=triple)
-        emb = self.emb_model.encode([text])
-        if emb.shape == (1, self.dim):
-            return emb.astype('float32')
-        else:
-            raise ValueError('Embedding shape error!')
-    
-    def add_triple(self, triple: Dict):
+    @staticmethod
+    def _pair_to_text(pair: Dict) -> str:
+        """将二元组拼成编码用文本"""
+        return f"病历: {pair.get('record', '')}\n诊断: {pair.get('diagnostic', '')}"
 
-        emb = self.encode(triple)
+    def _encode_texts(self, texts: List[str]) -> np.ndarray:
+        emb = self.emb_model.encode(texts)
+        emb = np.array(emb, dtype="float32")
+        if emb.ndim == 1:
+            emb = emb.reshape(1, -1)
+        return np.ascontiguousarray(emb)
+
+    # -------------------- 写入 --------------------
+
+    def add_pair(self, record: str, diagnostic: str):
+        """添加一条 (病历, 诊断) 二元组"""
+        pair = {"record": record, "diagnostic": diagnostic}
+        emb = self._encode_texts([self._pair_to_text(pair)])
         self.index.add(emb)
-        self.triples.append(triple)
+        self.pairs.append(pair)
+        with open(self.pair_file, "a", encoding="utf-8") as f:
+            f.write(json.dumps(pair, ensure_ascii=False) + "\n")
 
-        with open(self.triple_file, 'a', encoding='utf-8') as f:
-            f.write(json.dumps(triple, ensure_ascii=False)+"\n")
+    def batch_import(self, pairs: List[Dict]):
+        """批量导入 [{"record": ..., "diagnostic": ...}, ...]"""
+        if not pairs:
+            return
+        texts = [self._pair_to_text(p) for p in pairs]
+        embs = self._encode_texts(texts)
+        self.index.add(embs)
+        self.pairs.extend(pairs)
+        with open(self.pair_file, "a", encoding="utf-8") as f:
+            for p in pairs:
+                f.write(json.dumps(p, ensure_ascii=False) + "\n")
 
     def save_index(self):
-
+        """持久化 FAISS 索引到磁盘"""
         faiss.write_index(self.index, self.index_file)
 
-    def search(self, query: str, top_k=5) -> List[Dict]:
+    # -------------------- 检索 --------------------
 
-        # Step1: encode，确保输出是(1, dim)的二维float32
-        q_emb = self.emb_model.encode([query])
-        q_emb = np.array(q_emb, dtype='float32')
+    def search(self, query: str, top_k: int = 5) -> List[Dict]:
+        """
+        检索与 query 最相似的病例二元组
 
-        # Step2: 强制保证二维，faiss不接受一维输入
-        if q_emb.ndim == 1:
-            q_emb = q_emb.reshape(1, -1)
+        Returns:
+            list of {"record": ..., "diagnostic": ..., "score": float}
+        """
+        if self.index.ntotal == 0:
+            return []
 
-        # Step3: 确保内存连续，faiss底层C++要求contiguous array
-        q_emb = np.ascontiguousarray(q_emb)
-
-        # Step4: 正确传参，D=distances(n,k)，I=labels(n,k)
-        D, I = self.index.search(q_emb, top_k)
-
-        print(f"I[0] is {I[0]}")
+        q_emb = self._encode_texts([query])
+        actual_k = min(top_k, self.index.ntotal)
+        D, I = self.index.search(q_emb, actual_k)
 
         results = []
-        for idx in I[0]:
-            if 0 <= idx < len(self.triples):
-                results.append(self.triples[idx])
+        for rank, idx in enumerate(I[0]):
+            if 0 <= idx < len(self.pairs):
+                hit = dict(self.pairs[idx])
+                hit["score"] = float(D[0][rank])
+                results.append(hit)
         return results
 
-    def batch_import(self, triple_list: List[Dict]):
+    # -------------------- 工具方法 --------------------
 
-        texts = [self.triple_to_text(t) for t in triple_list]
-        embs = self.emb_model.encode(texts).astype('float32')
-        self.index.add(embs)
-        self.triples.extend(triple_list)
-        with open(self.triple_file, 'a', encoding='utf-8') as f:
-            for triple in triple_list:
-                f.write(json.dumps(triple, ensure_ascii=False)+'\n')
+    def __len__(self) -> int:
+        return len(self.pairs)
 
-    def get_triple(self, idx: int) -> Dict:
-
-        if 0 <= idx < len(self.triples):
-            return self.triples[idx]
-        raise IndexError(f'No triple:{idx}')
+    def get_pair(self, idx: int) -> Dict:
+        if 0 <= idx < len(self.pairs):
+            return self.pairs[idx]
+        raise IndexError(f"No pair at index {idx}")
     
     
         
