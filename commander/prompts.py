@@ -342,8 +342,7 @@ CPL_GENERATE_PROMPT = """
 - STEP <编号> "<描述>": 定义执行步骤
 - EXECUTE agent.<任务类型>(参数): 调用对应Agent
 - IF/ELIF/ELSE: 条件分支
-- REPEAT EVERY duration(<n>, "<单位>") UNTIL <条件>: 周期监测循环
-- AWAIT <对象>: 等待异步结果
+
 - NOTIFY <对象>(message="<内容>"): 发送通知
 - LOG "<内容>" LEVEL <INFO/WARNING/ERROR>: 记录日志
 

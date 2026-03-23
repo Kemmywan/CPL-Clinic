@@ -502,7 +502,6 @@ class CPLGenerator:
     def _emit_result_review(self, task: ResultReviewTask) -> list[str]:
         lines = []
         exam_ref = getattr(task, 'exam_ref', '')
-        lines.append(f"AWAIT exam_result")
         lines.append(f"exam_result = EXECUTE agent.result_review(")
         if exam_ref:
             lines.append(f'    exam_ref="{exam_ref}"')

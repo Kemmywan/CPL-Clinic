@@ -67,7 +67,6 @@ class AgentCall:
     params: dict = field(default_factory=dict)   # 调用参数
     depends_on_steps: list[int] = field(default_factory=list)  # 依赖的STEP编号
     source_line: str = ""               # 原始CPL文本行（审计用）
-    is_awaited: bool = False            # 是否有AWAIT前置
 
     # 执行阶段由executor填写
     transaction_id: str = ""
@@ -247,9 +246,6 @@ _RE_LOG = re.compile(r'LOG\s+"([^"]+)"(?:\s+LEVEL\s+(\w+))?')
 
 # NOTIFY target(message="...")
 _RE_NOTIFY = re.compile(r'NOTIFY\s+([\w.]+)\s*\(\s*message\s*=\s*"([^"]+)"\s*\)')
-
-# AWAIT var
-_RE_AWAIT = re.compile(r'AWAIT\s+(\w+)')
 
 # 参数行：key=value 或 key="value" 或 key=[...]
 _RE_PARAM = re.compile(r'(\w+)\s*=\s*(.+)')
@@ -436,7 +432,6 @@ class CPLInterpreter:
         返回: list[AgentCall | ConditionalBlock | LogEntry | NotifyEntry]
         """
         items = []
-        pending_await = False
         i = 0
 
         while i < len(lines):
@@ -457,13 +452,6 @@ class CPLInterpreter:
                 i += consumed
                 continue
 
-            # ---- AWAIT ----
-            m = _RE_AWAIT.match(stripped)
-            if m:
-                pending_await = True
-                i += 1
-                continue
-
             # ---- EXECUTE（带赋值） ----
             m = _RE_EXECUTE_ASSIGN.match(stripped)
             if m:
@@ -479,10 +467,8 @@ class CPLInterpreter:
                     var_name=var_name,
                     params=params,
                     source_line=stripped,
-                    is_awaited=pending_await,
                 )
                 items.append(call)
-                pending_await = False
                 i += consumed
                 continue
 
@@ -500,10 +486,8 @@ class CPLInterpreter:
                     var_name="",
                     params=params,
                     source_line=stripped,
-                    is_awaited=pending_await,
                 )
                 items.append(call)
-                pending_await = False
                 i += consumed
                 continue
 
@@ -713,7 +697,7 @@ class CPLInterpreter:
     def _build_call(
         self, step_number: int, step_label: str,
         call_domain: str, func_name: str, var_name: str,
-        params: dict, source_line: str, is_awaited: bool
+        params: dict, source_line: str,
     ) -> AgentCall:
         """构建一个AgentCall对象"""
         call_type_map = {
@@ -736,5 +720,4 @@ class CPLInterpreter:
             variable_name=var_name,
             params=params,
             source_line=source_line,
-            is_awaited=is_awaited,
         )
