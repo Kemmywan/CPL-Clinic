@@ -8,3 +8,9 @@
 /test_data/
 /.vscode/
 /memory/
+/test_data/
+/test_store/
+/test/
+_check.py
+/utils/*2*.py
+/cpl/*.tex
