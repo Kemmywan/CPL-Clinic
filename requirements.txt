@@ -1,3 +1,23 @@
-pip install faiss-cpu sentence-transformers
-python==3.13.5
-pip install fastapi uvicorn sse-starlette
+# Core LLM / Agent framework
+autogen-agentchat==0.7.5
+autogen-ext==0.7.5
+
+# Web framework
+fastapi==0.135.1
+uvicorn==0.41.0
+sse-starlette==3.3.2
+pydantic==2.11.7
+
+# RAG / Vector search
+faiss-cpu==1.13.2
+sentence-transformers==5.2.3
+numpy==2.4.2
+
+# Environment
+python-dotenv==1.1.0
+
+# Visualization & utilities
+matplotlib==3.10.8
+tqdm==4.67.1
+
+
