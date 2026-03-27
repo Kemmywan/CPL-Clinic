@@ -1,6 +1,6 @@
 [English](https://github.com/Kemmywan/CPL-Clinic/blob/master/docs/readme.md) | [中文](https://github.com/Kemmywan/CPL-Clinic/blob/master/docs/readme-zh.md)
 
-# AutoCPL
+# CPL-Clinic
 
 > 智能临床路径决策支持系统 —— 结合大语言模型（LLM）、任务分解与临床路径语言（CPL），自动化医疗诊疗流程。
 
@@ -44,7 +44,7 @@
 ## 项目结构
 
 ```
-AutoCPL/
+CPL-Clinic/
 ├── ambient/              # 多模态输入层（文件/API/音频）
 │   ├── models.py         # 数据模型：RawClinicalData
 │   ├── text_input.py     # 文本输入适配器
